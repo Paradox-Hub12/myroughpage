@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graph paper — My Rough Page</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  :root { --ink: #1d3557; --minor: #cfe3d9; --mid: #9cc7b4; --major: #5f9f86; --paper: #ffffff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f4f1ea; color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #ddd; }
+  .bar h1 { font-size: 17px; margin: 0; flex: 1 1 auto; }
+  .bar label { font-size: 14px; }
+  .bar input { width: 4.2em; font: inherit; padding: 4px; }
+  .bar button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--ink); background: var(--ink); color: #fff; cursor: pointer; }
+  .note { font-size: 13px; color: #555; padding: 0 16px 8px; background: #fff; margin: 0; }
+  .sheet { background: var(--paper); margin: 16px auto; width: 190mm; max-width: calc(100vw - 16px); padding: 4mm; box-shadow: 0 1px 6px rgba(0,0,0,.15); }
+  .sheet svg { display: block; width: 100%; height: auto; }
+  .meta { display: flex; justify-content: space-between; font-size: 12px; padding: 0 0 3mm; }
+  @media print {
+    body { background: #fff; }
+    .bar, .note { display: none; }
+    .sheet { margin: 0; box-shadow: none; width: 190mm; max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Graph paper</h1>
+  <label>x from <input id="x0" type="number" step="1"> to <input id="x1" type="number" step="1"></label>
+  <label>y from <input id="y0" type="number" step="1"> to <input id="y1" type="number" step="1"></label>
+  <button type="button" id="go">Redraw</button>
+  <button type="button" id="pr">Print</button>
+</div>
+<p class="note">Fine lines every 1 mm, darker every 5 mm and 1 cm. The axes are numbered for the range above. Print on A4 at 100% (no "fit to page").</p>
+<div class="sheet">
+  <div class="meta"><span>Name: ____________________</span><span id="scale">Scale:</span></div>
+  <svg id="g" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Graph paper with numbered x and y axes"></svg>
+</div>
+<script>
+(function () {
+  var W = 180, H = 250; // drawing area in mm
+  function q(name, d) {
+    var m = new RegExp("[?&]" + name + "=(-?\\d+)\\.\\.(-?\\d+)").exec(location.search);
+    return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : d;
+  }
+  var X = q("x", [-6, 6]), Y = q("y", [-8, 8]);
+  var $ = function (id) { return document.getElementById(id); };
+  $("x0").value = X[0]; $("x1").value = X[1]; $("y0").value = Y[0]; $("y1").value = Y[1];
+
+  function draw(x0, x1, y0, y1) {
+    if (x0 > 0) x0 = 0; if (x1 < 0) x1 = 0; if (y0 > 0) y0 = 0; if (y1 < 0) y1 = 0;
+    if (x1 - x0 < 2) x1 = x0 + 2; if (y1 - y0 < 2) y1 = y0 + 2;
+    // scale: whole number of units per cm (1, 2, 4, 5, 10, 20 ...) so the range fits, 1 cm per unit if possible
+    var steps = [1, 2, 4, 5, 10, 20, 25, 50, 100], u = 1;
+    for (var k = 0; k < steps.length; k++) {
+      u = steps[k];
+      if ((x1 - x0) / u * 10 <= W - 20 && (y1 - y0) / u * 10 <= H - 20) break;
+    }
+    var mm = 10 / u; // mm per unit
+    var ox = Math.round((W - (x1 - x0) * mm) / 2 / 10) * 10 - x0 * mm; // origin, aligned to cm lines
+    ox = Math.round(ox / 10) * 10;
+    var oy = Math.round(((H - (y1 - y0) * mm) / 2 + y1 * mm) / 10) * 10;
+    var s = [];
+    for (var i = 0; i <= W; i++) {
+      var c = i % 10 === 0 ? "var(--major)" : i % 5 === 0 ? "var(--mid)" : "var(--minor)";
+      var w = i % 10 === 0 ? 0.35 : i % 5 === 0 ? 0.25 : 0.15;
+      s.push('<line x1="' + i + '" y1="0" x2="' + i + '" y2="' + H + '" stroke="' + c + '" stroke-width="' + w + '"/>');
+    }
+    for (var j = 0; j <= H; j++) {
+      var c2 = j % 10 === 0 ? "var(--major)" : j % 5 === 0 ? "var(--mid)" : "var(--minor)";
+      var w2 = j % 10 === 0 ? 0.35 : j % 5 === 0 ? 0.25 : 0.15;
+      s.push('<line x1="0" y1="' + j + '" x2="' + W + '" y2="' + j + '" stroke="' + c2 + '" stroke-width="' + w2 + '"/>');
+    }
+    var ink = "var(--ink)";
+    s.push('<line x1="0" y1="' + oy + '" x2="' + W + '" y2="' + oy + '" stroke="' + ink + '" stroke-width="0.5"/>');
+    s.push('<line x1="' + ox + '" y1="0" x2="' + ox + '" y2="' + H + '" stroke="' + ink + '" stroke-width="0.5"/>');
+    var t = function (x, y, txt, a) { s.push('<text x="' + x + '" y="' + y + '" font-size="3" fill="' + ink + '" text-anchor="' + (a || "middle") + '" font-family="system-ui, sans-serif">' + txt + '</text>'); };
+    for (var vx = Math.ceil(-ox / mm); vx * mm + ox <= W; vx++) {
+      if (vx === 0 || vx % u !== 0) continue;
+      var px = ox + vx * mm; if (px < 3 || px > W - 3) continue;
+      s.push('<line x1="' + px + '" y1="' + (oy - 1) + '" x2="' + px + '" y2="' + (oy + 1) + '" stroke="' + ink + '" stroke-width="0.4"/>');
+      t(px, oy + 4.2, String(vx).replace("-", "−"));
+    }
+    for (var vy = Math.ceil((oy - H) / mm); oy - vy * mm >= 0; vy++) {
+      if (vy === 0 || vy % u !== 0) continue;
+      var py = oy - vy * mm; if (py < 3 || py > H - 3) continue;
+      s.push('<line x1="' + (ox - 1) + '" y1="' + py + '" x2="' + (ox + 1) + '" y2="' + py + '" stroke="' + ink + '" stroke-width="0.4"/>');
+      t(ox - 1.6, py + 1, String(vy).replace("-", "−"), "end");
+    }
+    t(ox - 1.6, oy + 4.2, "O", "end");
+    t(W - 2, oy - 1.5, "X", "end"); t(2, oy - 1.5, "X′", "start");
+    t(ox + 2, 4, "Y", "start"); t(ox + 2, H - 1.5, "Y′", "start");
+    var svg = $("g");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = s.join("");
+    $("scale").textContent = "Scale: 1 cm = " + u + (u === 1 ? " unit" : " units") + " on both axes";
+  }
+  function redraw() {
+    draw(parseInt($("x0").value, 10) || 0, parseInt($("x1").value, 10) || 0, parseInt($("y0").value, 10) || 0, parseInt($("y1").value, 10) || 0);
+  }
+  $("go").addEventListener("click", redraw);
+  $("pr").addEventListener("click", function () { window.print(); });
+  redraw();
+})();
+</script>
+</body>
+</html>
