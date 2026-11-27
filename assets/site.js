@@ -7487,7 +7487,32 @@
      positions (computed in Python on the Survey of India outline, EPSG:7755), and per place its number, name, state, date,
      event and clue. Learn: tap a point to see name, state, date and event. Test: eight clues in a random order, one tap
      answers; points are named only "Point N of 8" and no state name is shown anywhere. List view: the eight place names as
-     buttons. Topic 7 opens in Learn, the wrap-up in Test (the figure's data-block-id). Nothing is stored. */
+     buttons. Topic 7 opens in Learn, the wrap-up in Test (the figure's data-block-id). Nothing is stored.
+     Generic options in the model (all optional; without them the trainer is exactly the History Ch 2 one):
+       inset   absent -> one map only (no enlarged box);   list: false -> no List view button;   txt {...} -> UI wording;
+       kind: "choose" + choices [...] -> the test step is 'choose the answer' (Geography Ch 1, T07-V14 soil trainer,
+       content/C10-GEO-CH01/diagrams/_src): one point is highlighted (random order, each once), the learner picks its
+       answer (place.soil) from the fixed buttons; points leave the tab order in Test and are named only "Point N of 8";
+       the location words (place.loc) are read to screen readers; focus goes to the first answer button, then to
+       "Next point" after an answer.
+       More generic options for the 'clue -> tap a point' step (Geography Ch 2, T03-V8 tiger-reserve trainer,
+       content/C10-GEO-CH02/diagrams/_src); without them the History Ch 2 behaviour is unchanged:
+       any number of places N (default texts say "of N");   place.loc -> in Test a point is named "Point N of M — <loc>";
+       place.line -> the card shows that one line (the part before its first ': ' in bold) instead of date and event,
+       followed by txt.note;   txt.allRight -> the all-right message;   hiRight: true -> after a wrong tap the right point
+       is also highlighted (thick ring, larger, pulsing unless reduced motion);   lockPts: true -> the points are disabled
+       after an answer until "Next clue";   place.lab "l" -> its label goes left of the dot.
+       Always (generic, for every trainer): a point label that would run out of its map is moved to the other side or
+       below the dot; two 44 px targets closer than 44 px (narrow screens) are trimmed at their mid-line so they never
+       overlap; with one map and no answer buttons (class mp--one) the card goes beside the map in landscape.
+       More generic options (Geography Ch 3, T07-V16 dam trainer, content/C10-GEO-CH03/diagrams/_src); without them the
+       earlier trainers are unchanged:   side: true (with an inset, no answer buttons) -> class mp--side: in landscape
+       (>= 560 px) the main map takes the left column and the enlarged box and the result card share the right one.
+       More generic options for the 'choose' step (Geography Ch 4, T08-V16 crop-state trainer, content/C10-GEO-CH04/diagrams/_src);
+       without them the earlier trainers are unchanged:   showLoc: true -> in Test the highlighted point's place.loc words
+       are shown in the clue line (by default they are read to screen readers only);   txt.rightIs -> the wrong-answer
+       words before the right answer (default 'The right soil is');   txt.kind -> the word after the answer in the
+       screen-reader texts (default 'soil'; '' -> '<answer>, an example location'). */
   function initMp() {
     $$('svg[data-mp]').forEach(function (svg) {
       var art = svg.closest('.fig-art'); if (!art || art.getAttribute('data-mp-on')) return;
@@ -7508,16 +7533,20 @@
     var uid = 'mp' + Math.random().toString(36).slice(2, 7);
     var fig = art.closest('.fig'), bid = fig ? fig.getAttribute('data-block-id') || '' : '';
     if (fig) fig.classList.add('fig--mp');
+    var CH = D.kind === 'choose' && D.choices, HAS_INS = !!D.inset, TX = D.txt || {}, N = D.places.length;
+    var RIGHT_IS = TX.rightIs != null ? TX.rightIs : 'The right soil is', KIND = TX.kind != null ? TX.kind : 'soil';
+    function ans(p) { return p.soil + (KIND ? ' ' + KIND : ''); }
     var P = {}, ORDER = [];
     D.places.forEach(function (p) { P[p.key] = p; ORDER.push(p.key); });
     var S = { mode: /-WRAPUP\./.test(bid) ? 'test' : 'learn', list: false, sel: null, order: [], i: 0, done: {}, score: 0, wrong: [], last: '' };
     var mainG = src.querySelector('.mp-main'), insG = src.querySelector('.mp-ins');
     var insHTML = insG ? insG.innerHTML.replace(/mpclip0/g, uid + '-clip') : '';
     var root = document.createElement('div');
-    root.className = 'mp';
+    var SIDE = !CH && HAS_INS && D.side === true;
+    root.className = 'mp' + (CH ? ' mp--choose' : '') + (!CH && !HAS_INS ? ' mp--one' : '') + (SIDE ? ' mp--side' : '');
     function ptBtn(k, where) {
       var p = P[k], xy = where === 'main' ? D.main.pts[k] : D.inset.pts[k], w = where === 'main' ? D.main.w : D.inset.w, h = where === 'main' ? D.main.h : D.inset.h;
-      return '<button type="button" class="mp-pt" data-k="' + k + '" style="left:' + (100 * xy[0] / w).toFixed(3) + '%;top:' + (100 * xy[1] / h).toFixed(3) + '%">' +
+      return '<button type="button" class="mp-pt' + (p.lab === 'l' ? ' mp-pt--l' : '') + '" data-k="' + k + '" style="left:' + (100 * xy[0] / w).toFixed(3) + '%;top:' + (100 * xy[1] / h).toFixed(3) + '%">' +
         '<span class="mp-ring" aria-hidden="true"></span><span class="mp-mark" aria-hidden="true"></span><span class="mp-lab" aria-hidden="true"></span></button>';
     }
     var mainKeys = ORDER.filter(function (k) { return !P[k].gujarat; }), insKeys = ORDER.filter(function (k) { return P[k].gujarat; });
@@ -7525,30 +7554,35 @@
       '<div class="mp-top"><div class="mp-modes" role="group" aria-label="Mode">' +
         '<button type="button" class="mp-mode" data-m="learn" aria-pressed="false">Learn</button>' +
         '<button type="button" class="mp-mode" data-m="test" aria-pressed="false">Test</button></div>' +
-        '<button type="button" class="mp-listbtn" aria-pressed="false">List view</button></div>' +
+        (D.list === false ? '' : '<button type="button" class="mp-listbtn" aria-pressed="false">List view</button>') + '</div>' +
       '<div class="mp-cluebar"><p class="mp-clue"></p></div>' +
       '<div class="mp-stage">' +
         '<div class="mp-mapw mp-mainw"><svg class="dg mp-map" viewBox="0 0 ' + D.main.w + ' ' + D.main.h + '" aria-hidden="true" focusable="false">' + (mainG ? mainG.innerHTML : '') + '</svg>' +
           mainKeys.map(function (k) { return ptBtn(k, 'main'); }).join('') +
-          '<button type="button" class="mp-gbox" style="left:' + (100 * D.main.gbox[0] / D.main.w).toFixed(3) + '%;top:' + (100 * D.main.gbox[1] / D.main.h).toFixed(3) + '%" aria-label="Enlarged box: three places close together. Go to the enlarged map">' +
-          '<span class="mp-ring" aria-hidden="true"></span></button></div>' +
-        '<div class="mp-mapw mp-insw" id="' + uid + '-ins" style="max-width:' + D.inset.w + 'px;--iw:' + D.inset.w + 'px"><p class="mp-instl" aria-hidden="true">Enlarged box</p><svg class="dg mp-map" viewBox="0 0 ' + D.inset.w + ' ' + D.inset.h + '" aria-hidden="true" focusable="false">' + insHTML + '</svg>' +
-          insKeys.map(function (k) { return ptBtn(k, 'inset'); }).join('') + '</div>' +
+          (HAS_INS ? '<button type="button" class="mp-gbox" style="left:' + (100 * D.main.gbox[0] / D.main.w).toFixed(3) + '%;top:' + (100 * D.main.gbox[1] / D.main.h).toFixed(3) + '%" aria-label="Enlarged box: three places close together. Go to the enlarged map">' +
+          '<span class="mp-ring" aria-hidden="true"></span></button>' : '') + '</div>' +
+        (HAS_INS ? '<div class="mp-mapw mp-insw" id="' + uid + '-ins" style="max-width:' + D.inset.w + 'px;--iw:' + D.inset.w + 'px"><p class="mp-instl" aria-hidden="true">Enlarged box</p><svg class="dg mp-map" viewBox="0 0 ' + D.inset.w + ' ' + D.inset.h + '" aria-hidden="true" focusable="false">' + insHTML + '</svg>' +
+          insKeys.map(function (k) { return ptBtn(k, 'inset'); }).join('') + '</div>' : '') +
+        (CH ? '<div class="mp-choose" role="group" aria-label="' + mpEsc(TX.choicesLabel || 'Choose the answer') + '" hidden>' +
+          D.choices.map(function (c) { return '<button type="button" class="mp-ch" data-c="' + mpEsc(c) + '">' + mpEsc(c) + '</button>'; }).join('') + '</div>' : '') +
       '</div>' +
       '<div class="mp-list" hidden><p class="mp-listhd"></p><div class="mp-lbtns"></div></div>' +
       '<div class="mp-out" hidden><div class="mp-fb"></div>' +
-        '<div class="mp-acts"><button type="button" class="mp-next" hidden>Next clue</button><button type="button" class="mp-again" hidden>Try again</button></div></div>' +
+        '<div class="mp-acts"><button type="button" class="mp-next" hidden>' + mpEsc(TX.next || 'Next clue') + '</button><button type="button" class="mp-again" hidden>' + mpEsc(TX.again || 'Try again') + '</button></div></div>' +
       '<p class="mp-attr">' + mpEsc(D.attr) + '</p>' +
       '<div class="mp-live" aria-live="polite"></div>';
     art.removeChild(src);
     art.appendChild(root);
     var clue = $('.mp-clue', root), fb = $('.mp-fb', root), live = $('.mp-live', root), next = $('.mp-next', root), again = $('.mp-again', root);
     var stage = $('.mp-stage', root), listW = $('.mp-list', root), lbtns = $('.mp-lbtns', root), listBtn = $('.mp-listbtn', root);
-    var out = $('.mp-out', root), mainW = $('.mp-mainw', root), insW = $('.mp-insw', root);
+    var out = $('.mp-out', root), mainW = $('.mp-mainw', root), insW = $('.mp-insw', root), chooseW = $('.mp-choose', root);
+    var chBtns = CH ? $$('.mp-ch', root) : [];
     var wideMq = window.matchMedia ? window.matchMedia('(min-width: 720px)') : null;
-    /* the result panel sits right under the map that was tapped (phones), under both maps (wide), under the list (list view) */
+    var sideMq = SIDE && window.matchMedia ? window.matchMedia('(orientation: landscape) and (min-width: 560px)') : null;
+    /* the result panel sits right under the map that was tapped (phones), under both maps (wide), under the list (list
+       view); in the 'choose' trainer always under the stage (the map and the answer buttons) */
     function placeOut(k) {
-      var after = S.list ? listW : (wideMq && wideMq.matches) || !k ? stage : (P[k].gujarat ? insW : mainW);
+      var after = S.list ? listW : !CH && !HAS_INS ? mainW : sideMq && sideMq.matches ? insW : CH || (wideMq && wideMq.matches) || !k ? stage : (P[k].gujarat ? insW : mainW);
       if (after === stage || after === listW) after.parentNode.insertBefore(out, after.nextSibling);
       else after.parentNode.insertBefore(out, after.nextSibling);
       show(out, !!fb.innerHTML);
@@ -7560,22 +7594,41 @@
     function sorted() { return ORDER.slice().sort(function (a, b) { return P[a].name < P[b].name ? -1 : 1; }); }
     function card(k, withState) {
       var p = P[k];
+      if (CH) {
+        return '<p class="mp-card"><b>' + mpEsc(p.name) + ' · ' + mpEsc(p.soil) + '</b> <span class="mp-ex">(example location)</span><br>' +
+          '<span class="mp-when">Region:</span> ' + mpEsc(p.region) + '<br><span class="mp-when">Clue:</span> ' + mpEsc(p.clue) + '</p>';
+      }
+      if (p.line) {
+        var ci = p.line.indexOf(': ');
+        return '<p class="mp-card">' + (ci > 0 ? '<b>' + mpEsc(p.line.slice(0, ci + 1)) + '</b> ' + mpEsc(p.line.slice(ci + 2)) : mpEsc(p.line)) +
+          (TX.note ? ' <span class="mp-ex">' + mpEsc(TX.note) + '</span>' : '') + '</p>';
+      }
       return '<p class="mp-card"><b>' + mpEsc(p.name) + '</b>' + (withState ? ' · ' + mpEsc(p.state) : '') + '<br>' +
         '<span class="mp-when">' + mpEsc(p.when) + '</span> — ' + mpEsc(p.what) + '</p>';
+    }
+    function cardSay(k) {
+      var p = P[k];
+      if (!CH && p.line) return p.line + (TX.note ? ' ' + TX.note : '');
+      return CH ? p.name + ': ' + ans(p) + ', an example location. Region: ' + p.region + '. Clue: ' + p.clue
+        : p.name + ', ' + p.state + '. ' + p.when + ': ' + p.what + '.';
     }
     function names() {
       ORDER.forEach(function (k) {
         var p = P[k], b = pts[k];
-        b.setAttribute('aria-label', S.mode === 'learn' ? 'Point ' + p.n + ' of 8: ' + p.name + ', ' + p.state : 'Point ' + p.n + ' of 8');
+        if (CH) {
+          b.setAttribute('aria-label', S.mode === 'learn' ? 'Point ' + p.n + ' of ' + N + ': ' + ans(p) + ', ' + p.loc : 'Point ' + p.n + ' of ' + N);
+          if (S.mode === 'test') b.setAttribute('tabindex', '-1'); else b.removeAttribute('tabindex');
+        } else b.setAttribute('aria-label', S.mode === 'learn' ? 'Point ' + p.n + ' of ' + N + ': ' + p.name + ', ' + p.state : 'Point ' + p.n + ' of ' + N + (p.loc ? ' — ' + p.loc : ''));
       });
     }
     function clearMarks() {
       ORDER.forEach(function (k) {
-        var b = pts[k]; b.classList.remove('is-sel', 'is-right', 'is-wrong'); b.removeAttribute('aria-pressed');
-        $('.mp-lab', b).textContent = ''; $('.mp-mark', b).textContent = '';
+        var b = pts[k]; b.classList.remove('is-sel', 'is-right', 'is-wrong', 'is-cur'); b.removeAttribute('aria-pressed');
+        $('.mp-lab', b).textContent = ''; $('.mp-mark', b).textContent = ''; if (D.lockPts) b.disabled = false;
       });
     }
     function listRender() {
+      if (!lbtns) return;
       var keys = S.mode === 'learn' ? ORDER : sorted();
       $('.mp-listhd', root).textContent = S.mode === 'learn' ? 'The eight places (north to south):' : 'Choose the place for this clue:';
       lbtns.innerHTML = keys.map(function (k) { return '<button type="button" class="mp-lb" data-k="' + k + '">' + mpEsc(P[k].name) + '</button>'; }).join('');
@@ -7583,21 +7636,65 @@
     function render() {
       root.setAttribute('data-mode', S.mode);
       $$('.mp-mode', root).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-m') === S.mode ? 'true' : 'false'); });
-      listBtn.setAttribute('aria-pressed', S.list ? 'true' : 'false');
+      if (listBtn) listBtn.setAttribute('aria-pressed', S.list ? 'true' : 'false');
       show(stage, !S.list); show(listW, S.list);
+      if (chooseW) show(chooseW, S.mode === 'test');
       names();
       listRender();
     }
-    function startTest() {
+    function focusFirst() { if (chBtns[0]) chBtns[0].focus({ preventScroll: true }); }
+    function startTest(focus) {
       S.order = mpShuffle(ORDER.slice(), S.last); S.last = S.order.join(); S.i = 0; S.done = {}; S.score = 0; S.wrong = [];
-      clearMarks(); askClue(false);
+      clearMarks(); askClue(false, focus);
     }
-    function askClue(announce) {
+    function askText(k) { var p = P[k]; return 'Point ' + p.n + ' of ' + N + ' — ' + p.loc + '. ' + (TX.ask || ''); }
+    function askClue(announce, focus) {
       var k = S.order[S.i];
-      clue.innerHTML = '<span class="mp-cn">Clue ' + (S.i + 1) + ' of 8</span> ' + mpEsc(P[k].clue);
+      if (CH) {
+        var p = P[k];
+        clue.innerHTML = '<span class="mp-cn">Point ' + p.n + ' of ' + N + '</span><span class="' + (D.showLoc ? 'mp-loc' : 'mp-sr') + '"> — ' + mpEsc(p.loc) + '.</span> ' +
+          mpEsc(TX.ask || '') + ' <span class="mp-prog">(question ' + (S.i + 1) + ' of ' + N + ')</span>';
+      } else clue.innerHTML = '<span class="mp-cn">Clue ' + (S.i + 1) + ' of ' + N + '</span> ' + mpEsc(P[k].clue);
       clearMarks(); fb.innerHTML = ''; show(next, false); show(again, false); show(out, false);
       $$('.mp-lb', root).forEach(function (b) { b.disabled = false; b.classList.remove('is-right', 'is-wrong'); });
-      if (announce) say('Clue ' + (S.i + 1) + ' of 8: ' + P[k].clue);
+      if (CH) {
+        pts[k].classList.add('is-cur');
+        chBtns.forEach(function (b) { b.disabled = false; b.classList.remove('is-right', 'is-wrong'); b.removeAttribute('aria-describedby'); });
+        if (focus) focusFirst();
+        if (announce) say(askText(k));
+      } else if (announce) say('Clue ' + (S.i + 1) + ' of ' + N + ': ' + P[k].clue);
+    }
+    function revisePart() {
+      if (CH) return S.wrong.map(function (w) { return P[w].name + ' (' + P[w].loc + ')'; });
+      return S.wrong.map(function (w) { return P[w].name; });
+    }
+    function finish(last) {
+      if (last) {
+        var rev = revisePart();
+        fb.innerHTML += '<p class="mp-score"><b>' + mpEsc(TX.score || 'Your score') + ': ' + S.score + ' out of ' + N + '</b></p>' +
+          '<p class="mp-rev">' + (rev.length ? mpEsc(TX.revise || 'Places to revise') + ': ' + mpEsc(rev.join(', ')) + '.' : mpEsc(TX.allRight || 'All eight right. Well done!')) + '</p>';
+        show(again, true);
+      } else show(next, true);
+    }
+    function answerChoice(c) {
+      var want = S.order[S.i];
+      if (S.mode !== 'test' || S.done[S.i]) return;
+      S.done[S.i] = true;
+      var p = P[want], ok = c === p.soil;
+      if (ok) S.score++; else S.wrong.push(want);
+      pts[want].classList.add(ok ? 'is-right' : 'is-wrong'); $('.mp-mark', pts[want]).textContent = ok ? '✔' : '✘';
+      chBtns.forEach(function (b) {
+        b.disabled = true; var bc = b.getAttribute('data-c');
+        if (bc === p.soil) b.classList.add('is-right'); else if (bc === c && !ok) b.classList.add('is-wrong');
+      });
+      var head = ok ? '<span class="mp-ok">✔ Right!</span>' : '<span class="mp-no">✘ Not quite.</span> ' + mpEsc(RIGHT_IS) + ' <b>' + mpEsc(p.soil) + '</b>.';
+      fb.innerHTML = '<p class="mp-verdict">' + head + '</p>' + card(want);
+      var last = S.i === N - 1;
+      finish(last);
+      say((ok ? 'Right! ' : 'Not quite. ' + RIGHT_IS + ' ' + p.soil + '. ') + cardSay(want) +
+        (last ? ' ' + (TX.score || 'Your score') + ': ' + S.score + ' out of ' + N + '.' + (S.wrong.length ? ' ' + (TX.revise || 'Places to revise') + ': ' + revisePart().join(', ') + '.' : '') : ''));
+      placeOut(want);
+      setTimeout(function () { (last ? again : next).focus({ preventScroll: true }); }, 0);
     }
     function answer(k) {
       var want = S.order[S.i];
@@ -7606,41 +7703,44 @@
       var ok = k === want, p = P[want];
       if (ok) S.score++; else S.wrong.push(want);
       pts[want].classList.add('is-right'); $('.mp-lab', pts[want]).textContent = p.name; $('.mp-mark', pts[want]).textContent = '✔';
-      if (!ok) { pts[k].classList.add('is-wrong'); $('.mp-mark', pts[k]).textContent = '✘'; }
+      if (!ok) { pts[k].classList.add('is-wrong'); $('.mp-mark', pts[k]).textContent = '✘'; if (D.hiRight) pts[want].classList.add('is-cur'); }
+      fitLab(pts[want]);
+      if (D.lockPts) ORDER.forEach(function (q) { pts[q].disabled = true; });
       $$('.mp-lb', root).forEach(function (b) {
         b.disabled = true; var bk = b.getAttribute('data-k');
         if (bk === want) b.classList.add('is-right'); else if (bk === k && !ok) b.classList.add('is-wrong');
       });
       var head = ok ? '<span class="mp-ok">✔ Right!</span>' : '<span class="mp-no">✘ Not quite.</span> The right place is shown on the map:';
       fb.innerHTML = '<p class="mp-verdict">' + head + '</p>' + card(want, false);
-      var last = S.i === 7;
-      if (last) {
-        var rev = S.wrong.map(function (w) { return P[w].name; });
-        fb.innerHTML += '<p class="mp-score"><b>Your score: ' + S.score + ' out of 8</b></p>' +
-          '<p class="mp-rev">' + (rev.length ? 'Places to revise: ' + mpEsc(rev.join(', ')) + '.' : 'All eight right. Well done!') + '</p>';
-        show(again, true);
-      } else show(next, true);
-      say((ok ? 'Right! ' : 'Not quite. The right place is ') + p.name + '. ' + p.when + ': ' + p.what + '.' +
-        (last ? ' Your score: ' + S.score + ' out of 8.' + (S.wrong.length ? ' Places to revise: ' + S.wrong.map(function (w) { return P[w].name; }).join(', ') + '.' : '') : ''));
+      var last = S.i === N - 1;
+      finish(last);
+      say((ok ? 'Right! ' : 'Not quite. The right place is ') + (p.line ? (ok ? '' : p.name + ', shown on the map. ') + cardSay(want) : p.name + '. ' + p.when + ': ' + p.what + '.') +
+        (last ? ' ' + (TX.score || 'Your score') + ': ' + S.score + ' out of ' + N + '.' + (S.wrong.length ? ' ' + (TX.revise || 'Places to revise') + ': ' + S.wrong.map(function (w) { return P[w].name; }).join(', ') + '.' : '') : ''));
       placeOut(k);
       setTimeout(function () { (last ? again : next).focus({ preventScroll: true }); }, 0);
     }
     function learn(k) {
       clearMarks();
-      var b = pts[k]; b.classList.add('is-sel'); b.setAttribute('aria-pressed', 'true'); $('.mp-lab', b).textContent = P[k].name;
+      var b = pts[k]; b.classList.add('is-sel'); b.setAttribute('aria-pressed', 'true'); $('.mp-lab', b).textContent = CH ? P[k].soil : P[k].name;
+      fitLab(b);
       fb.innerHTML = card(k, true);
       placeOut(k);
-      say(P[k].name + ', ' + P[k].state + '. ' + P[k].when + ': ' + P[k].what + '.');
+      say(cardSay(k));
     }
-    function pick(k) { if (S.mode === 'learn') learn(k); else answer(k); }
-    function setMode(m) {
+    function pick(k) { if (S.mode === 'learn') learn(k); else if (!CH) answer(k); }
+    function setMode(m, focus) {
       S.mode = m; clearMarks(); fb.innerHTML = ''; show(out, false);
       render();
-      if (m === 'learn') { clue.textContent = 'Tap any point to see its name, state, date and event.'; show(next, false); show(again, false); }
-      else startTest();
+      if (m === 'learn') { clue.textContent = TX.learn || 'Tap any point to see its name, state, date and event.'; show(next, false); show(again, false); }
+      else startTest(focus);
     }
     $$('.mp-mode', root).forEach(function (b) {
-      on(b, 'click', function () { var m = b.getAttribute('data-m'); if (m !== S.mode) { setMode(m); say(m === 'learn' ? 'Learn mode. Tap any point.' : 'Test mode. Clue 1 of 8: ' + P[S.order[0]].clue); } });
+      on(b, 'click', function () {
+        var m = b.getAttribute('data-m'); if (m === S.mode) return;
+        setMode(m, CH);
+        if (CH) say(m === 'learn' ? 'Learn mode. ' + (TX.learn || '') : 'Test mode. ' + askText(S.order[0]));
+        else say(m === 'learn' ? 'Learn mode. Tap any point.' : 'Test mode. Clue 1 of ' + N + ': ' + P[S.order[0]].clue);
+      });
     });
     on(listBtn, 'click', function () {
       S.list = !S.list; render(); if (fb.innerHTML) placeOut(null);
@@ -7648,6 +7748,8 @@
       say(S.list ? 'List view: the eight place names.' : 'Map view.');
     });
     on(root, 'click', function (e) {
+      var c = CH && e.target.closest('.mp-ch');
+      if (c && root.contains(c)) { if (!c.disabled) answerChoice(c.getAttribute('data-c')); return; }
       var b = e.target.closest('.mp-pt, .mp-lb'); if (b && root.contains(b) && !b.disabled) pick(b.getAttribute('data-k'));
     });
     on($('.mp-gbox', root), 'click', function () {
@@ -7658,9 +7760,67 @@
       setTimeout(function () { ins.classList.remove('is-focus'); }, reduced ? 0 : 1200);
       say('Enlarged map: three points.');
     });
-    on(next, 'click', function () { S.i++; askClue(true); clue.setAttribute('tabindex', '-1'); clue.focus({ preventScroll: true }); if (clue.scrollIntoView) clue.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }); });
-    on(again, 'click', function () { startTest(); say('New order. Clue 1 of 8: ' + P[S.order[0]].clue); clue.setAttribute('tabindex', '-1'); clue.focus({ preventScroll: true }); if (clue.scrollIntoView) clue.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }); });
-    setMode(S.mode);
+    function toTop(el) { if (el.scrollIntoView) el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }); }
+    on(next, 'click', function () {
+      S.i++; askClue(true, CH);
+      if (CH) { toTop($('.mp-cluebar', root)); return; }
+      clue.setAttribute('tabindex', '-1'); clue.focus({ preventScroll: true }); toTop(clue);
+    });
+    on(again, 'click', function () {
+      startTest(CH);
+      if (CH) { say('New order. ' + askText(S.order[0])); toTop($('.mp-cluebar', root)); return; }
+      say('New order. Clue 1 of ' + N + ': ' + P[S.order[0]].clue); clue.setAttribute('tabindex', '-1'); clue.focus({ preventScroll: true }); toTop(clue);
+    });
+    /* a label that would run out of its map goes to the other side of the dot, else centred below it (kept inside) */
+    function fitLab(b) {
+      var lab = $('.mp-lab', b), wrap = b.parentNode; if (!lab || !lab.textContent) return;
+      lab.style.left = lab.style.right = lab.style.top = lab.style.transform = '';
+      var W = wrap.getBoundingClientRect(), r = lab.getBoundingClientRect();
+      if (r.right <= W.right - 1 && r.left >= W.left + 1) return;
+      lab.style.left = r.right > W.right - 1 ? 'auto' : '38px'; lab.style.right = r.right > W.right - 1 ? '38px' : 'auto';
+      r = lab.getBoundingClientRect();
+      if (r.right <= W.right - 1 && r.left >= W.left + 1) return;
+      var bb = b.getBoundingClientRect(), cx = bb.left + bb.width / 2, half = r.width / 2;
+      var shift = Math.max(W.left + 2 + half - cx, Math.min(0, W.right - 2 - half - cx));
+      lab.style.left = '50%'; lab.style.right = 'auto'; lab.style.top = 'calc(100% + 13px)';
+      lab.style.transform = 'translate(calc(-50% + ' + shift.toFixed(1) + 'px), -50%)';
+    }
+    /* two 44 px targets closer than 44 px (narrow screens): trim each at the mid-line between the two centres */
+    function clipPoly(poly, nx, ny, c) {          /* keep the part of the polygon with nx*x + ny*y <= c */
+      var out = [];
+      for (var i = 0; i < poly.length; i++) {
+        var a = poly[i], b = poly[(i + 1) % poly.length], da = nx * a[0] + ny * a[1] - c, db = nx * b[0] + ny * b[1] - c;
+        if (da <= 0) out.push(a);
+        if ((da < 0 && db > 0) || (da > 0 && db < 0)) { var t = da / (da - db); out.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]); }
+      }
+      return out;
+    }
+    function trimTargets() {
+      var bs = ORDER.map(function (k) { return pts[k]; }).filter(function (b) { return b && b.offsetParent; });
+      var cs = bs.map(function (b) { var r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width, r.height]; });
+      bs.forEach(function (b, i) {
+        var poly = [[0, 0], [cs[i][2], 0], [cs[i][2], cs[i][3]], [0, cs[i][3]]], cut = false;
+        bs.forEach(function (o, j) {
+          if (j === i || o.parentNode !== b.parentNode) return;
+          var dx = cs[j][0] - cs[i][0], dy = cs[j][1] - cs[i][1];
+          if (Math.hypot(dx, dy) >= Math.min(cs[i][2], cs[i][3]) - 0.01) return;   /* round targets: they meet only when closer than 44 px */
+          cut = true;   /* local coordinates: centre (w/2, h/2); keep the points nearer to this centre */
+          poly = clipPoly(poly, dx, dy, dx * (cs[i][2] / 2 + dx / 2) + dy * (cs[i][3] / 2 + dy / 2));
+        });
+        var hit = $('.mp-hit', b);
+        if (cut) {
+          if (!hit) { hit = document.createElement('span'); hit.className = 'mp-hit'; hit.setAttribute('aria-hidden', 'true'); b.insertBefore(hit, b.firstChild); }
+          hit.style.clipPath = 'polygon(' + poly.map(function (q) { return q[0].toFixed(1) + 'px ' + q[1].toFixed(1) + 'px'; }).join(', ') + ')';
+          b.classList.add('is-trim');
+        } else if (hit) { b.removeChild(hit); b.classList.remove('is-trim'); }
+      });
+    }
+    var trimT;
+    function trimSoon() { clearTimeout(trimT); trimT = setTimeout(trimTargets, 60); }
+    on(window, 'resize', trimSoon);
+    if (window.ResizeObserver) new ResizeObserver(trimSoon).observe(mainW);
+    setMode(S.mode, false);
+    trimTargets();
   }
 /*END-MP*/
 /*NS*/
@@ -7672,7 +7832,12 @@
      (the figure's data-block-id). Move a card by drag (mouse anywhere on the card; touch on its grip), by tap (tap a card,
      then a slot) or by keyboard (Tab to a card, Enter to pick up, arrow keys to choose lane and slot, Enter to drop,
      Escape to cancel). A card dropped on a full slot swaps with it. Check marks every placed card with a tick or a cross
-     and its textbook line. Nothing is stored. */
+     and its textbook line. Nothing is stored.
+     WORDING FROM THE DATA (History Ch 3 reuses this sorter, T08-V12 -> C10-HIST-CH03-WRAPUP-V14): the optional D.ui
+     object sets the heading, the modes (one mode is shown as a plain "Sort by ..." line, not a button), the help line,
+     the tray title, the lane ends, which checked cards show their textbook line ('all' / 'wrong'), the visible words
+     under a right card, the score line ('{n} of {total} right', total = cards.length), the all-right and Show-answer
+     lines. Every default reproduces History Ch 1 exactly. A card without "pos" is placed by Show answer in data order. */
   function initNs() {
     $$('svg[data-ns]').forEach(function (svg) {
       var art = svg.closest('.fig-art'); if (!art || art.getAttribute('data-ns-on')) return;
@@ -7686,27 +7851,50 @@
     for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; }
     return a;
   }
+  var NS_NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+    'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+  function nsUi(D) {
+    var u = D.ui || {}, n = D.cards.length;
+    var modes = u.modes || [
+      { key: 'country', label: 'Sort by country', help: 'Put each card in its country’s lane. Only the lane is checked; the order inside a lane is free.', order: false, note: ' (lane)' },
+      { key: 'time', label: 'Sort by country and time', help: 'Put each card in its country’s lane, earliest first. Both the lane and the order are checked.', order: true, note: ' (lane and order)' }];
+    function has(k) { return modes.some(function (m) { return m.key === k; }); }
+    return {
+      heading: u.heading || '', modes: modes, tray: u.tray || 'Cards', ends: u.ends !== false, why: u.why || 'all',
+      rightWords: u.rightWords || '', wrongLane: u.wrongLane || 'Wrong lane.', wrongTime: u.wrongTime || 'Wrong place in time.',
+      score: u.score || '{n} of {total} right', total: n,
+      allRight: u.allRight || 'All ' + (NS_NUM[n] || n) + ' right. Well done!',
+      readWhy: u.readWhy || 'Read the textbook line under each ✘ card, then move it.',
+      shown: u.shown || 'Answer shown: the three lanes in time order.',
+      startTopic: u.startTopic || (has('country') ? 'country' : modes[0].key),
+      startWrap: u.startWrap || (has('time') ? 'time' : modes[0].key)
+    };
+  }
   function nsBuild(art, src, D) {
     var fig = art.closest('.fig'), bid = fig ? fig.getAttribute('data-block-id') || '' : '';
     if (fig) fig.classList.add('fig--ns');
-    var CARD = {}, IDS = [], LANE = {};
-    D.cards.forEach(function (c) { CARD[c.id] = c; IDS.push(c.id); });
+    var CARD = {}, IDS = [], LANE = {}, U = nsUi(D), MODE = {}, LPOS = {};
+    U.modes.forEach(function (m) { MODE[m.key] = m; });
+    D.cards.forEach(function (c) { CARD[c.id] = c; IDS.push(c.id); if (c.pos == null) { LPOS[c.lane] = (LPOS[c.lane] || 0) + 1; c.pos = LPOS[c.lane]; } });
     D.lanes.forEach(function (l, i) { LANE[l.key] = l; l.i = i; });
-    var S = { mode: /-WRAPUP\./.test(bid) ? 'time' : 'country', at: {}, tray: [], held: null, marks: null, shown: false };
+    D.order = D.order || [];
+    function ordered() { var m = MODE[S.mode]; return !!(m && (m.order != null ? m.order : m.key === 'time')); }
+    var S = { mode: /-WRAPUP\./.test(bid) ? U.startWrap : U.startTopic, at: {}, tray: [], held: null, marks: null, shown: false };
     var root = document.createElement('div');
     root.className = 'ns';
     root.innerHTML =
-      '<div class="ns-modes" role="group" aria-label="What to check">' +
-        '<button type="button" class="ns-mode" data-m="country" aria-pressed="false">Sort by country</button>' +
-        '<button type="button" class="ns-mode" data-m="time" aria-pressed="false">Sort by country and time</button></div>' +
+      (U.heading ? '<h3 class="ns-hd">' + nsEsc(U.heading) + '</h3>' : '') +
+      (U.modes.length > 1 ? '<div class="ns-modes" role="group" aria-label="What to check">' + U.modes.map(function (m) {
+        return '<button type="button" class="ns-mode" data-m="' + nsEsc(m.key) + '" aria-pressed="false">' + nsEsc(m.label) + '</button>'; }).join('') + '</div>'
+        : '<p class="ns-mode1">' + nsEsc(U.modes[0].label) + '</p>') +
       '<p class="ns-help"></p>' +
-      '<div class="ns-trayw"><div class="ns-trayhd"><b class="ns-traytl">Cards</b>' +
+      '<div class="ns-trayw"><div class="ns-trayhd"><b class="ns-traytl">' + nsEsc(U.tray) + '</b>' +
         '<button type="button" class="ns-back" hidden>Put the card back</button></div>' +
         '<ul class="ns-tray" aria-label="Cards still to sort"></ul></div>' +
       '<div class="ns-lanes">' + D.lanes.map(function (l) {
         return '<section class="ns-lane" data-lane="' + l.key + '"><div class="ns-lhd"><h3 class="ns-lname">' + nsEsc(l.name) + '</h3>' +
-          '<span class="ns-ends" aria-hidden="true"><span>earlier</span><span>later</span></span></div>' +
-          '<ol class="ns-slots" aria-label="' + nsEsc(l.name) + ' lane, ' + l.n + ' slots, earlier to later"></ol></section>';
+          (U.ends ? '<span class="ns-ends" aria-hidden="true"><span>earlier</span><span>later</span></span>' : '') + '</div>' +
+          '<ol class="ns-slots" aria-label="' + nsEsc(l.name) + ' lane, ' + l.n + ' slots' + (U.ends ? ', earlier to later' : '') + '"></ol></section>';
       }).join('') + '</div>' +
       '<div class="ns-acts"><button type="button" class="ns-check">Check</button>' +
         '<button type="button" class="ns-show">Show answer</button><button type="button" class="ns-again">Try again</button></div>' +
@@ -7727,7 +7915,7 @@
       IDS.forEach(function (id) {
         var p = S.at[id]; if (!p) return;
         var c = CARD[id], okLane = p.lane === c.lane, ok = okLane;
-        if (ok && S.mode === 'time') {
+        if (ok && ordered()) {
           D.order.forEach(function (pr) {
             var a = pr[0], b = pr[1]; if (a !== id && b !== id) return;
             var o = a === id ? b : a, po = S.at[o];
@@ -7749,17 +7937,17 @@
         '<button type="button" class="' + cls + '" data-id="' + id + '" aria-pressed="' + (S.held === id) + '" aria-label="' + nsEsc(label) + '">' +
           '<span class="ns-grip" aria-hidden="true"></span><span class="ns-txt">' + nsEsc(c.text) + '</span>' +
           (mk ? '<span class="ns-mark" aria-hidden="true">' + (mk.ok ? '✔' : '✘') + '</span>' : '') + '</button>' +
-        (mk ? '<p class="ns-why' + (mk.ok ? '' : ' is-wrong') + '">' + (mk.ok ? '' : '<b>' + (mk.lane ? 'Wrong place in time.' : 'Wrong lane.') + '</b> ') + nsEsc(c.why) + '</p>' : '') +
+        (mk && (!mk.ok || U.why === 'all') ? '<p class="ns-why' + (mk.ok ? '' : ' is-wrong') + '">' + (mk.ok ? '' : '<b>' + (mk.lane ? nsEsc(U.wrongTime) : nsEsc(U.wrongLane)) + '</b> ') + nsEsc(c.why) + '</p>' : '') +
+        (mk && mk.ok && U.why !== 'all' && U.rightWords ? '<p class="ns-why is-right"><b>' + nsEsc(U.rightWords) + '</b></p>' : '') +
         '</div>';
     }
     function render(focusSel) {
       root.setAttribute('data-mode', S.mode);
       $$('.ns-mode', root).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-m') === S.mode ? 'true' : 'false'); });
-      help.textContent = S.mode === 'time' ? 'Put each card in its country’s lane, earliest first. Both the lane and the order are checked.'
-        : 'Put each card in its country’s lane. Only the lane is checked; the order inside a lane is free.';
+      help.textContent = MODE[S.mode].help || '';
       var inTray = S.tray.filter(function (id) { return !S.at[id]; });
       tray.innerHTML = inTray.map(function (id) { return '<li>' + cardHTML(id, 'tray') + '</li>'; }).join('');
-      $('.ns-traytl', root).textContent = inTray.length ? 'Cards (' + inTray.length + ' to sort)' : 'All cards are in the lanes';
+      $('.ns-traytl', root).textContent = inTray.length ? U.tray + ' (' + inTray.length + ' to sort)' : 'All cards are in the lanes';
       root.classList.toggle('is-empty', !inTray.length);
       D.lanes.forEach(function (l) {
         var ol = $('.ns-lane[data-lane="' + l.key + '"] .ns-slots', root), h = '';
@@ -7780,10 +7968,11 @@
       var n = 0, placed = 0;
       for (var k in S.marks) { placed++; if (S.marks[k].ok) n++; }
       var left = IDS.length - placed;
-      var h = S.shown ? '<p><b>Answer shown:</b> the three lanes in time order.</p>' :
-        '<p class="ns-score"><b>' + n + ' of 15 right</b>' + (S.mode === 'time' ? ' (lane and order)' : ' (lane)') + '.</p>' +
+      var sh = U.shown.split(':'), m = MODE[S.mode];
+      var h = S.shown ? '<p>' + (sh.length > 1 ? '<b>' + nsEsc(sh[0]) + ':</b>' + nsEsc(sh.slice(1).join(':')) : nsEsc(U.shown)) + '</p>' :
+        '<p class="ns-score"><b>' + nsEsc(U.score.replace('{n}', n).replace('{total}', U.total)) + '</b>' + nsEsc(m.note != null ? m.note : (ordered() ? ' (lane and order)' : ' (lane)')) + '.</p>' +
         (left ? '<p>' + left + (left === 1 ? ' card is' : ' cards are') + ' still to sort.</p>' : '') +
-        (n === 15 ? '<p>All fifteen right. Well done!</p>' : (placed > n ? '<p>Read the textbook line under each ✘ card, then move it.</p>' : ''));
+        (n === U.total ? '<p>' + nsEsc(U.allRight) + '</p>' : (placed > n ? '<p>' + nsEsc(U.readWhy) + '</p>' : ''));
       out.innerHTML = h; show(out, true);
     }
     function clearMarks() { if (S.marks) { S.marks = null; S.shown = false; result(); } }
@@ -7825,7 +8014,7 @@
       if (b.classList.contains('ns-check')) { S.marks = judge(); S.shown = false; S.held = null; render(); result(); var n = 0; for (var k in S.marks) if (S.marks[k].ok) n++; say(out.textContent); if (out.scrollIntoView) out.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' }); return; }
       if (b.classList.contains('ns-show')) {
         S.at = {}; IDS.forEach(function (id) { S.at[id] = { lane: CARD[id].lane, slot: CARD[id].pos - 1 }; });
-        S.held = null; S.marks = judge(); S.shown = true; render(); result(); say('Answer shown: the three lanes in time order.'); return;
+        S.held = null; S.marks = judge(); S.shown = true; render(); result(); say(U.shown); return;
       }
       if (b.classList.contains('ns-again')) { reset(); render(); result(); say('New start: the cards are shuffled again.'); var f = $('.ns-tray .ns-card', root); if (f) f.focus(); return; }
       if (b.classList.contains('ns-back')) { if (S.held) toTray(S.held); return; }

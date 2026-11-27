@@ -1990,6 +1990,7 @@ html[data-subject="maths"] { --acc: var(--acc-maths); --tint: var(--tint-maths);
 .mp-stage[hidden], .mp-list[hidden] { display: none; }
 .mp-mapw { position: relative; width: 100%; min-width: 0; }
 .mp-mapw > svg { display: block; width: 100%; height: auto; }
+.mp-mainw { max-width: 520px; margin-left: auto; margin-right: auto; }   /* the map svg is capped at 520 px (.fig-art svg): its box too, so the point buttons stay on the dots (fix, Geography Ch 4: 768 px portrait) */
 .mp-insw { margin: 0 auto; border-radius: 8px; scroll-margin-top: 110px; }
 .mp-insw.is-focus { outline: 3px dashed var(--acc); outline-offset: 3px; }
 .mp-instl { position: absolute; left: 8px; top: 4px; margin: 0; font: 600 14px "Lexend", sans-serif; color: var(--ink); pointer-events: none; }
@@ -2020,6 +2021,32 @@ html[data-subject="maths"] { --acc: var(--acc-maths); --tint: var(--tint-maths);
 .mp-modes button:focus-visible, .mp-listbtn:focus-visible, .mp-acts button:focus-visible, .mp-lb:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
 .mp-attr { margin: 0; font-size: 13px; color: var(--ink-soft); }
 .mp-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* generic options (Geography Ch 1 T07-V14 soil trainer: kind "choose"); unused by the History Ch 2 model */
+.mp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mp-prog { font-weight: 400; font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+.mp-ex { color: var(--ink-soft); }
+.mp-choose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; box-sizing: border-box; align-self: stretch; }
+.mp-choose[hidden] { display: none; }
+.mp-ch { min-height: 48px; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--card); color: var(--ink); font: 600 15px "Lexend", sans-serif; cursor: pointer; }
+.mp-ch:disabled { cursor: default; opacity: .75; }
+.mp-ch.is-right { opacity: 1; border: 2.5px solid var(--correct); }
+.mp-ch.is-right::before { content: "✔ "; color: var(--correct); }
+.mp-ch.is-wrong { opacity: 1; border: 2.5px dashed var(--wrong); }
+.mp-ch.is-wrong::before { content: "✘ "; color: var(--wrong); }
+.mp-ch:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+.mp-pt.is-cur { z-index: 3; }
+.mp-pt.is-cur .mp-ring { inset: 1px; border: 4px solid var(--ink); box-shadow: 0 0 0 2px var(--card), inset 0 0 0 2px var(--card); animation: mp-pulse 1.6s ease-in-out infinite; }
+.mp-pt.is-cur.is-right .mp-ring { border: 4px solid var(--correct); }
+.mp-pt.is-cur.is-wrong .mp-ring { border: 4px dashed var(--wrong); }
+@keyframes mp-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@media (orientation: landscape) and (min-width: 560px) {     /* landscape: the answer buttons beside the map */
+  .mp--choose .mp-stage { flex-direction: row; align-items: center; }
+  .mp--choose .mp-mainw { flex: 1 1 0; min-width: 0; }
+  .mp--choose .mp-choose { flex: 0 0 210px; width: 210px; grid-template-columns: 1fr; }
+}
+@media (orientation: portrait), (max-width: 559px) {
+  .mp--choose .mp-stage { flex-direction: column; }
+}
 @media (min-width: 720px) {
   .mp-stage { flex-direction: row; align-items: flex-start; }
   .mp-mainw { flex: 1 1 0; min-width: 0; }
@@ -2028,10 +2055,30 @@ html[data-subject="maths"] { --acc: var(--acc-maths); --tint: var(--tint-maths);
 @media (max-width: 599px) {
   .fig--mp .mp-stage { margin: 0 -13px; }
   .fig-art > svg.mp-svg0 { width: calc(100% + 26px); max-width: none; margin: 0 -13px; }   /* static / no-JS view: 358 px */
+  .fig--mp .mp--choose .mp-choose { padding: 0 13px; }
 }
-@media (prefers-reduced-motion: reduce) { .mp-insw.is-focus { outline-style: solid; } }
+/* generic options (Geography Ch 2 T03-V8 tiger-reserve trainer: one map, clue -> tap a point); unused by the earlier models */
+.mp-pt--l .mp-lab { left: auto; right: 38px; }
+.mp-pt:disabled { cursor: default; }
+.mp-pt.is-trim { pointer-events: none; }
+.mp-hit { position: absolute; inset: 0; border-radius: 50%; pointer-events: auto; }
+@media (orientation: landscape) and (min-width: 560px) {     /* landscape, one map: the card beside the map */
+  .mp--one .mp-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 36%); align-items: start; gap: 14px; }
+  .mp--one .mp-stage > .mp-out { position: sticky; top: 76px; margin: 0; width: auto; align-self: start; }
+}
+/* generic option side: true (Geography Ch 3 T07-V16 dam trainer: an inset, clue -> tap a point); unused by the earlier models */
+@media (orientation: landscape) and (min-width: 560px) {     /* landscape: main map left; the enlarged box and the card right */
+  .mp--side .mp-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 36%); grid-template-rows: auto 1fr; align-items: start; gap: 14px; }
+  .mp--side .mp-stage[hidden] { display: none; }
+  .mp--side .mp-stage > .mp-mainw { grid-column: 1; grid-row: 1 / span 2; }
+  .mp--side .mp-stage > .mp-insw { grid-column: 2; grid-row: 1; width: 100%; margin: 0; justify-self: start; }
+  .mp--side .mp-stage > .mp-out { grid-column: 2; grid-row: 2; position: sticky; top: 76px; margin: 0; width: auto; align-self: start; }
+}
+/* generic option showLoc: true (Geography Ch 4 T08-V16 crop-state trainer: the crop clue shown in Test); unused by the earlier models */
+.mp-loc { font-weight: 400; }
+@media (prefers-reduced-motion: reduce) { .mp-insw.is-focus { outline-style: solid; } .mp-pt.is-cur .mp-ring { animation: none; } }
 /* ---- END-MP */
-/* ---- NS: three roads sorter (History Ch 1, T08-V12; initNs in site.js) */
+/* ---- NS: three roads sorter (History Ch 1, T08-V12; reused by History Ch 3, WRAPUP-V14; initNs in site.js) */
 .fig-art > svg.ns-svg0 { max-width: 420px; }
 .ns { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 15px; }
 .ns-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -2040,6 +2087,10 @@ html[data-subject="maths"] { --acc: var(--acc-maths); --tint: var(--tint-maths);
 .ns-modes button:first-child { border-left: 0; }
 .ns-modes button[aria-pressed="true"] { background: var(--acc-fill); color: #FFFFFF; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 .ns-help { margin: 0; color: var(--ink-soft); line-height: 1.45; }
+.ns-hd { margin: 0; font: 600 17px "Lexend", sans-serif; color: var(--heading); }
+.ns-mode1 { margin: 0; padding: 2px 0 2px 10px; border-left: 4px solid var(--acc); color: var(--heading); font: 600 16px/1.3 "Lexend", sans-serif; }
+.ns-why.is-right { color: var(--correct); }
+.ns-why.is-right b { color: var(--correct); }
 .ns-trayw { padding: 10px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--paper-deep); }
 .ns-trayw.is-over { border-color: var(--acc); border-style: solid; }
 .ns-trayhd { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -2118,3 +2169,4 @@ html[data-subject="social"] { --acc: var(--acc-social); --tint: var(--tint-socia
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tint-social: rgba(242, 178, 92, .14); } }
 :root[data-theme="dark"] { --tint-social: rgba(242, 178, 92, .14); }
 .ch-row .ch-soon { white-space: normal; text-align: right; max-width: 42%; }
+.foot-note a { color: var(--foot-ink); text-decoration: underline; text-underline-offset: 3px; }
